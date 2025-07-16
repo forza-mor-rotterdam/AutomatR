@@ -1,0 +1,23 @@
+services:
+  automatr_app:
+    build: &build-definition
+      context: ./app
+      args:
+          GIT_SHA: local_version
+    env_file:
+      - .env.local
+    networks:
+      - mor_bridge_network
+    volumes:
+      - ./app:/app
+    command: ["python", "melding_afhandelen.py"]
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1024M
+
+networks:
+  mor_bridge_network:
+    external: true

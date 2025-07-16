@@ -1,0 +1,36 @@
+issuer: http://localhost:5556
+
+storage:
+  type: sqlite3
+  config:
+    file: /data/dex.db
+
+web:
+  http: 0.0.0.0:5556
+
+staticClients:
+- id: mor-planr
+  redirectURIs:
+    - http://localhost:8005/oidc/callback/
+    - http://127.0.0.1:8005/oidc/callback/
+    - http://planr.mor.local:8003/oidc/callback/
+  name: PlanR
+  secret: insecure
+
+enablePasswordDB: true
+
+staticPasswords:
+- email: "user@example.com"
+  hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"  # hash for: password
+  userID: "1"
+  username: "user"
+  name: "Standaard gebruiker"
+- email: "admin@admin.com"
+  hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"  # hash for: password
+  userID: "2"
+  username: "admin"
+  name: "Admin gebruiker"
+
+oauth2:
+  responseTypes: [ "code", "token", "id_token" ]
+  skipApprovalScreen: true

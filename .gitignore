@@ -1,0 +1,11 @@
+/.env.local
+/.env.*.local
+!.gitkeep
+**/__pycache__/
+/__pycache__/
+*__py_cache*
+*.py[cod]
+*.pytest_cache*
+**.bash_history
+app/*.log
+**/.python_history
