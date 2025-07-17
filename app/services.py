@@ -1,5 +1,7 @@
 import os
+
 from mor_api_services import MORCoreService as BasisMORCoreService
+
 
 class MORCoreService(BasisMORCoreService):
     def __init__(self, *args, **kwargs):
