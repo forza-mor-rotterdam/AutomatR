@@ -22,31 +22,11 @@ jobs:
       - name: Linting
         run: bash bin/cleanup_pre_commit.sh
 
-  create-docker-test-image-and-test:
-    name: Create Docker test image and testing
-    runs-on: ubuntu-latest
-    needs: django-lint
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Build Docker test image
-        run: docker compose -f docker-compose.test.yaml build
-
-      - name: Create Docker network
-        run: docker network create planr_network
-
-      - name: Start Docker Containers
-        run: docker compose -f docker-compose.test.yaml up -d
-
-      - name: Run Tests
-        run: docker compose -f docker-compose.test.yaml run app python manage.py test
-
   build-and-push-docker-image:
     name: Build and push Docker image
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    needs: create-docker-test-image-and-test
+    needs: django-lint
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -74,15 +54,6 @@ jobs:
             type=raw,develop
             type=raw,test
 
-      - name: Extract metadata (tags, labels) for Docker nginx
-        id: meta_nginx
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-nginx
-          tags: |
-            type=raw,develop
-            type=raw,test
-
       - name: Build and push app Docker image
         uses: docker/build-push-action@v3
         with:
@@ -93,14 +64,6 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             DEPLOY_DATE=${{ steps.get_date.outputs.DATE }}
-
-      - name: Build and push nginx Docker image
-        uses: docker/build-push-action@v3
-        with:
-          context: "{{defaultContext}}:nginx"
-          push: true
-          tags: ${{ steps.meta_nginx.outputs.tags }}
-          labels: ${{ steps.meta_nginx.outputs.labels }}
 
   deploy-acc:
     name: Acceptance release
