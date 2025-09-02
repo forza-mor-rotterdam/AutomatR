@@ -14,10 +14,7 @@ class Listener(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
-        try:
-            prefetch_count = int(os.getenv("RABBITMQ_PEFETCH_COUNT", 50))
-        except Exception:
-            prefetch_count = 50
+        prefetch_count = int(os.getenv("RABBITMQ_PREFETCH_COUNT", 1))
 
         connection = pika.BlockingConnection(
             pika.connection.URLParameters(os.getenv("RABBITMQ_URL"))
