@@ -2,11 +2,25 @@ import json
 import logging
 import os
 import threading
+from logging import config
 
 import pika
+from rule_engine import Rule as R
 from services import MORCoreService
 
+config.fileConfig("logging.conf", disable_existing_loggers=False)
+
 logger = logging.getLogger(__name__)
+
+ENVIRONMENT_DEVELOPMENT = "development"
+ENVIRONMENT_TEST = "test"
+ENVIRONMENT_ACCEPTANCE = "acceptance"
+ENVIRONMENT_PRODUCTION = "production"
+
+ENVIRONMENT_IS_PRODUCTION = (
+    os.getenv("ENVIRONMENT", ENVIRONMENT_PRODUCTION) == ENVIRONMENT_PRODUCTION
+)
+BOT_USER_EMAIL = os.getenv("BOT_USER_EMAIL", "botjeknor@rotterdam.nl")
 
 
 class Listener(threading.Thread):
@@ -59,102 +73,57 @@ class MeldingAfhandelen(Listener):
         melding_data = self.mor_core_service.haal_data(melding_url, raw_response=False)
 
         logger.info("Start test")
-
-        # test: melding status controle
-        if melding_data.get("status", {}).get("naam") != "controle":
-            logger.info("Niet afhandelen: De melding heeft niet de status 'Controle'")
-            return False
-
-        # test: signalen met anonieme melders
-        def signaal_is_anoniem_gemeld(signaal):
-            values = [
-                v.lower() if isinstance(v, str) else v
-                for v in list(signaal.get("melder", {}).values())
-            ]
-            return not [v for v in values if v and v != "anoniem"]
-
-        signalen = [
-            signaal
-            for signaal in melding_data.get("signalen_voor_melding", [])
-            if not signaal_is_anoniem_gemeld(signaal)
-        ]
-        if signalen:
-            logger.info(
-                "Niet afhandelen: Eén of meer signalen bevat niet anonieme info"
-            )
-            return False
-
-        # test: aantal taken
-        taakopdrachten = [
-            taakopdracht
-            for taakopdracht in melding_data.get("taakopdrachten_voor_melding", [])
-            if not taakopdracht.get("verwijderd_op")
-        ]
-        if len(taakopdrachten) > 1:
-            logger.info(
-                "Niet afhandelen: Er zijn meerdere taken aangemaakt voor deze melding"
-            )
-            return False
-
-        if len(taakopdrachten) == 0:
-            logger.info(
-                "Niet afhandelen: Er zijn geen taken aangemaakt voor deze melding"
-            )
-            return False
-
-        taakopdracht = taakopdrachten[0]
-
-        # test: taakopdracht afgehandeld
-        if not taakopdracht.get("resolutie") and not taakopdracht.get("afgesloten_op"):
-            logger.info(
-                "Niet afhandelen: De enige valide taakopdracht is niet afgehandeld"
-            )
-            return False
-
-        # test: taakopdracht afgehandeld met resolutie opgelost
-        if (
-            taakopdracht.get("resolutie")
-            and taakopdracht.get("resolutie") != "opgelost"
-            and taakopdracht.get("afgesloten_op")
-        ):
-            logger.info(
-                "Niet afhandelen: De enige valide taakopdracht is niet afgehandeld met resolutie 'opgelost'"
-            )
-            return False
-
-        # test: taakopdracht afgehandeld met resolutie opgelost zonder omschrijving_intern
-        taakgebeurtenissen = [
-            taakgebeurtenis
-            for taakgebeurtenis in taakopdrachten[0].get(
-                "taakgebeurtenissen_voor_taakopdracht", []
-            )
-            if taakgebeurtenis.get("resolutie")
-        ]
-        if not taakgebeurtenissen or taakgebeurtenissen[0].get(
-            "omschrijving_intern", ""
-        ):
-            logger.info(
-                "Niet afhandelen: De enige valide taakopdracht is afgehandeld met een omschrijving_intern die niet leeg is"
-            )
-
-        # afhandelen
-        afhandel_data = {
-            "uuid": melding_data.get("uuid"),
-            "resolutie": "opgelost",
-            "omschrijving_intern": "Afgehandeld door bot",
-            "omschrijving_extern": "Afgehandeld door bot",
-            "gebruiker": os.getenv("BOT_USER_EMAIL", "botjeknor@rotterdam.nl"),
-        }
-        logger.info(
-            f"Melding afhandelen met data: {json.dumps(afhandel_data, indent=4)}"
-        )
-        melding_afhandelen_response = self.mor_core_service.melding_afhandelen_v2(
-            **afhandel_data
+        rules = (
+            ("Heeft de melding de status 'Controle'", "status&['naam'] == 'controle'"),
+            (
+                "Is er maar één taakopdracht succesvol afgehandeld zonder intere opmerking",
+                "[taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op']].length == 1 and [taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op'] and taakopdracht&['afgesloten_op'] and taakopdracht&['resolutie'] == 'opgelost' and taakopdracht&['taakgebeurtenissen_voor_taakopdracht'] and [taakgebeurtenis for taakgebeurtenis in taakopdracht['taakgebeurtenissen_voor_taakopdracht'] if taakgebeurtenis&['resolutie'] == 'opgelost' and (not taakgebeurtenis&['omschrijving_intern'])]].length == 1",
+            ),
+            (
+                "Hebben alle melders, de melding annoniem gemeld",
+                "not [signaal for signaal in signalen_voor_melding if signaal&['melder'] and [value for value in signaal['melder'].values if value and value.to_str.as_lower != 'anoniem']]",
+            ),
         )
 
-        if melding_afhandelen_response.get("error"):
-            logger.error(
-                f"Melding '{melding_url}', is niet afgehandeld, error: {melding_afhandelen_response.get('error')}"
+        test_results = [[r[0], R(r[1]).matches(melding_data)] for r in rules]
+        test_results_passed = not bool([t[0] for t in test_results if not t[1]])
+
+        test_results_verbose = [
+            f'{test[0]}? {"Ja" if test[1] else "Nee"}' for test in test_results
+        ]
+        omschrijving_intern = f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}, {', '.join(test_results_verbose)}"
+
+        logger.info(f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}")
+        for test_result_verbose in test_results_verbose:
+            logger.info(test_result_verbose)
+
+        if test_results_passed:
+            afhandel_data = {
+                "uuid": melding_data.get("uuid"),
+                "resolutie": "opgelost",
+                "omschrijving_intern": omschrijving_intern
+                if not ENVIRONMENT_IS_PRODUCTION
+                else "",
+                "omschrijving_extern": "Afgehandeld door bot",
+                "gebruiker": BOT_USER_EMAIL,
+            }
+            logger.info(
+                f"Melding afhandelen met data: {json.dumps(afhandel_data, indent=4)}"
             )
-        else:
-            logger.info(f"Melding '{melding_url}', is afgehandeld")
+            melding_afhandelen_response = self.mor_core_service.melding_afhandelen_v2(
+                **afhandel_data
+            )
+
+            if melding_afhandelen_response.get("error"):
+                logger.error(
+                    f"Melding '{melding_url}', is niet afgehandeld, error: {melding_afhandelen_response.get('error')}"
+                )
+            else:
+                logger.info(f"Melding '{melding_url}', is afgehandeld")
+
+        elif not ENVIRONMENT_IS_PRODUCTION:
+            self.mor_core_service.melding_gebeurtenis_toevoegen(
+                melding_data.get("uuid"),
+                omschrijving_intern=omschrijving_intern,
+                gebruiker=BOT_USER_EMAIL,
+            )
