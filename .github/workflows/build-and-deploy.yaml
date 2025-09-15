@@ -74,7 +74,7 @@ jobs:
       - name: Pull the image from the registry
         run: docker image pull ${{ env.REGISTRY }}/${{ needs.build.outputs.image_name }}@${{ needs.build.outputs.image_digest }}
       - name: Create container
-        run: docker container create ${{ env.REGISTRY }}/${{ needs.build.outputs.image_name }}@${{ needs.build.outputs.image_digest }} --name=app
+        run: docker container create --name=app ${{ env.REGISTRY }}/${{ needs.build.outputs.image_name }}@${{ needs.build.outputs.image_digest }}
       - name: Start container
         run: docker container start app
       - name: Run a command inside the container
