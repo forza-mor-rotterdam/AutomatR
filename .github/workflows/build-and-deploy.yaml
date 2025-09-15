@@ -78,7 +78,7 @@ jobs:
       - name: Start container
         run: docker container start app
       - name: Run a command inside the container
-        run: docker container exec app "ls -larth"
+        run: docker container exec app sh -c "ls -larth"
       - name: Stop container
         run: docker container stop app --timeout=5
 
