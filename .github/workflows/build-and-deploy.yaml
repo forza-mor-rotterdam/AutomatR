@@ -22,10 +22,6 @@ jobs:
         env:
           IMAGE_NAME: ${{ github.repository }}
         run: php -r "echo 'name=' . strtolower(getenv('IMAGE_NAME'));" >> "$GITHUB_OUTPUT"
-      - name: Debug1
-        run: echo ${{ steps.convert_image_name.outputs }}
-      - name: Debug2
-        run: echo ${{ steps.convert_image_name.outputs.name }}
       - id: login
         name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
@@ -55,7 +51,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
     outputs:
-      image_name: ${{ steps.build_push.outputs.name }}
+      image_name: ${{ steps.convert_image_name.outputs.name }}
       image_id: ${{ steps.build_push.outputs.imageid }}
       image_digest: ${{ steps.build_push.outputs.digest }}
       image_metadata: ${{ steps.build_push.outputs.metadata }}
