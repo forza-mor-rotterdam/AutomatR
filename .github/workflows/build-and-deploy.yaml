@@ -33,7 +33,7 @@ jobs:
         name: Extract metadata (tags, labels) for Docker
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ steps.build_push.outputs }}
+          images: ${{ env.REGISTRY }}/${{ steps.convert_image_name.outputs.name }}
           flavor: |
             latest=false
           tags: |
