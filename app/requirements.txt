@@ -1,4 +1,4 @@
 requests==2.29.0
 pika==1.3.2
-git+https://github.com/forza-mor-rotterdam/mor-api-services.git@ffee04bf018e02db97a3122c3c42d934548c4df7
+git+https://github.com/forza-mor-rotterdam/mor-api-services.git@f72986e803c6e264347bec1739a89120b152ccff
 rule-engine==4.5.3
