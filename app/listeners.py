@@ -58,7 +58,7 @@ class Listener(threading.Thread):
         logger.debug(f"body: {body}")
 
         channel.basic_ack(delivery_tag=method.delivery_tag)
-        self.test(json.loads(body))
+        # self.test(json.loads(body))
 
     def test(self, bericht):
         raise NotImplementedError()
