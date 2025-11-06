@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import threading
 from logging import config
 
@@ -25,8 +26,12 @@ BOT_USER_EMAIL = os.getenv("BOT_USER_EMAIL", "botjeknor@rotterdam.nl")
 
 class Listener(threading.Thread):
     routing_key = None
+    rule_sets = []
 
-    def __init__(self):
+    def __init__(self, routing_key, rule_sets):
+        self.routing_key = routing_key
+        self.rule_sets = rule_sets
+
         threading.Thread.__init__(self)
         prefetch_count = int(os.getenv("RABBITMQ_PREFETCH_COUNT", 1))
 
@@ -60,70 +65,104 @@ class Listener(threading.Thread):
         channel.basic_ack(delivery_tag=method.delivery_tag)
         self.test(json.loads(body))
 
+    def _camel_case_string(self, string):
+        return re.sub(r"([a-z])([A-Z])", r"\1_\2", string).lower()
+
+    def get_variables(self):
+        listener_vars = os.getenv(
+            f"LISTENER_{self._camel_case_string(self.__class__.__name__).upper()}",
+            "this must generate json error",
+        )
+        try:
+            return json.loads(listener_vars)
+        except Exception:
+            return {}
+
     def test(self, bericht):
         raise NotImplementedError()
 
 
 class MeldingAfhandelen(Listener):
-    routing_key = "melding.*.taakopdrachten_veranderd"
-
     def test(self, bericht):
         logger.info(json.dumps(bericht, indent=4))
         melding_url = bericht.get("_links", {}).get("melding", {}).get("href")
         melding_data = self.mor_core_service.haal_data(melding_url, raw_response=False)
 
-        logger.info("Start test")
-        rules = (
-            ("Heeft de melding de status 'Controle'", "status&['naam'] == 'controle'"),
-            (
-                "Is er maar één taakopdracht succesvol afgehandeld zonder intere opmerking",
-                "[taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op']].length == 1 and [taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op'] and taakopdracht&['afgesloten_op'] and taakopdracht&['resolutie'] == 'opgelost' and taakopdracht&['taakgebeurtenissen_voor_taakopdracht'] and [taakgebeurtenis for taakgebeurtenis in taakopdracht['taakgebeurtenissen_voor_taakopdracht'] if taakgebeurtenis&['resolutie'] == 'opgelost' and (not taakgebeurtenis&['omschrijving_intern'])]].length == 1",
-            ),
-            (
-                "Hebben alle melders, de melding annoniem gemeld",
-                "not [signaal for signaal in signalen_voor_melding if signaal&['melder'] and [value for value in signaal['melder'].values if value and value.to_str.as_lower != 'anoniem']]",
-            ),
-        )
+        variables = self.get_variables()
+        print("variables")
+        print(variables)
 
-        test_results = [[r[0], R(r[1]).matches(melding_data)] for r in rules]
-        test_results_passed = not bool([t[0] for t in test_results if not t[1]])
+        logger.info("Start MeldingAfhandelen tests")
 
-        test_results_verbose = [
-            f'{test[0]}? {"Ja" if test[1] else "Nee"}' for test in test_results
+        active_rule_sets = [
+            rule_set for rule_set in self.rule_sets if rule_set.get("active")
         ]
-        omschrijving_intern = f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}, {', '.join(test_results_verbose)}"
+        logger.info(f"Using {len(active_rule_sets)} of {len(self.rule_sets)} rule sets")
+        for rule_set in active_rule_sets:
+            rules = rule_set.get("rules", [])
+            print("rule key")
+            print(rule_set["key"])
+            rule_variables = variables.get(rule_set["key"], {})
+            # rule_variables = {
+            #     required_var_key: rule_variables.get(required_var_key, default_value)
+            #     for required_var_key, default_value in rule_set.get("required_vars", {})
+            # }
+            if isinstance(rule_variables, dict):
+                rule_variables = [rule_variables]
+            print("Aantal variabelen varianten voor deze rule")
+            print(len(rule_variables))
+            for vars in rule_variables:
+                test_results = [
+                    [r[0].format(**vars), R(r[1].format(**vars)).matches(melding_data)]
+                    for r in rules
+                ]
+                test_results_passed = not bool([t[0] for t in test_results if not t[1]])
 
-        logger.info(f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}")
-        for test_result_verbose in test_results_verbose:
-            logger.info(test_result_verbose)
+                test_results_verbose = [
+                    f'{test[0]} {"Ja" if test[1] else "Nee"}' for test in test_results
+                ]
+                omschrijving_intern = f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}, {', '.join(test_results_verbose)}"
 
-        if test_results_passed:
-            afhandel_data = {
-                "uuid": melding_data.get("uuid"),
-                "resolutie": "opgelost",
-                "omschrijving_intern": omschrijving_intern
-                if not ENVIRONMENT_IS_PRODUCTION
-                else "",
-                "omschrijving_extern": "Afgehandeld door bot",
-                "gebruiker": BOT_USER_EMAIL,
-            }
-            logger.info(
-                f"Melding afhandelen met data: {json.dumps(afhandel_data, indent=4)}"
-            )
-            melding_afhandelen_response = self.mor_core_service.melding_afhandelen_v2(
-                **afhandel_data
-            )
-
-            if melding_afhandelen_response.get("error"):
-                logger.error(
-                    f"Melding '{melding_url}', is niet afgehandeld, error: {melding_afhandelen_response.get('error')}"
+                logger.info(
+                    f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}"
                 )
-            else:
-                logger.info(f"Melding '{melding_url}', is afgehandeld")
+                for test_result_verbose in test_results_verbose:
+                    logger.info(test_result_verbose)
 
-        elif not ENVIRONMENT_IS_PRODUCTION:
-            self.mor_core_service.melding_gebeurtenis_toevoegen(
-                melding_data.get("uuid"),
-                omschrijving_intern=omschrijving_intern,
-                gebruiker=BOT_USER_EMAIL,
-            )
+                if test_results_passed:
+                    afhandel_data = {
+                        "uuid": melding_data.get("uuid"),
+                        "resolutie": "opgelost",
+                        "omschrijving_intern": omschrijving_intern
+                        if not ENVIRONMENT_IS_PRODUCTION
+                        else "",
+                        "omschrijving_extern": "Afgehandeld door bot",
+                        "gebruiker": BOT_USER_EMAIL,
+                    }
+                    afhandel_data.update(
+                        {
+                            k: v.format(**vars)
+                            for k, v in rule_set.get("data", {}).items()
+                        }
+                    )
+                    logger.info(
+                        f"Melding afhandelen met data: {json.dumps(afhandel_data, indent=4)}"
+                    )
+                    melding_afhandelen_response = (
+                        self.mor_core_service.melding_afhandelen_v2(**afhandel_data)
+                    )
+
+                    if melding_afhandelen_response.get("error"):
+                        logger.error(
+                            f"Melding '{melding_url}', is niet afgehandeld, error: {melding_afhandelen_response.get('error')}"
+                        )
+                    else:
+                        logger.info(f"Melding '{melding_url}', is afgehandeld")
+
+                    if not ENVIRONMENT_IS_PRODUCTION:
+                        self.mor_core_service.melding_gebeurtenis_toevoegen(
+                            melding_data.get("uuid"),
+                            omschrijving_intern=omschrijving_intern,
+                            gebruiker=BOT_USER_EMAIL,
+                        )
+                    break
