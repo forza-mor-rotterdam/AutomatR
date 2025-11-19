@@ -100,8 +100,7 @@ class MeldingAfhandelen(Listener):
         logger.info(f"Using {len(active_rule_sets)} of {len(self.rule_sets)} rule sets")
         for rule_set in active_rule_sets:
             rules = rule_set.get("rules", [])
-            print("rule key")
-            print(rule_set["key"])
+            logger.info(f"Rule key: {rule_set['key']}")
             rule_variables = variables.get(rule_set["key"], {})
             # rule_variables = {
             #     required_var_key: rule_variables.get(required_var_key, default_value)
@@ -109,8 +108,9 @@ class MeldingAfhandelen(Listener):
             # }
             if isinstance(rule_variables, dict):
                 rule_variables = [rule_variables]
-            print("Aantal variabelen varianten voor deze rule")
-            print(len(rule_variables))
+            logger.info(
+                f"Aantal variabelen varianten voor deze rule: {len(rule_variables)}"
+            )
             for vars in rule_variables:
                 test_results = [
                     [r[0].format(**vars), R(r[1].format(**vars)).matches(melding_data)]
