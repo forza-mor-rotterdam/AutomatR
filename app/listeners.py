@@ -73,6 +73,8 @@ class Listener(threading.Thread):
             f"LISTENER_{self._camel_case_string(self.__class__.__name__).upper()}",
             "this must generate json error",
         )
+        # TODO: remove line below before production release
+        listener_vars = '{"taak_aantal_1_met_specifiek_taaktype_en_signalen_anoniem": [{"taakapplicatie_taaktype_url": "https://externr-test.forzamor.nl/api/v1/taaktype/daf6b381-ecfe-49d9-a197-2e124635b452/", "omschrijving_extern": "Doorgestuurd naar Havenbedrijf Rotterdam https://www.portofrotterdam.com/nl"}]}'
         try:
             return json.loads(listener_vars)
         except Exception:
@@ -89,8 +91,8 @@ class MeldingAfhandelen(Listener):
         melding_data = self.mor_core_service.haal_data(melding_url, raw_response=False)
 
         variables = self.get_variables()
-        print("variables")
-        print(variables)
+        logger.info(f"MeldingAfhandelen melding_url: {melding_url}")
+        logger.info(f"MeldingAfhandelen all variables: {variables}")
 
         logger.info("Start MeldingAfhandelen tests")
 
@@ -112,6 +114,7 @@ class MeldingAfhandelen(Listener):
                 f"Aantal variabelen varianten voor deze rule: {len(rule_variables)}"
             )
             for vars in rule_variables:
+                logger.info(f"Start test for rule set with variables: {vars}")
                 test_results = [
                     [r[0].format(**vars), R(r[1].format(**vars)).matches(melding_data)]
                     for r in rules
