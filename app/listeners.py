@@ -23,6 +23,8 @@ ENVIRONMENT_IS_PRODUCTION = (
 )
 BOT_USER_EMAIL = os.getenv("BOT_USER_EMAIL", "botjeknor@rotterdam.nl")
 
+GIT_SHA = os.getenv("GIT_SHA", "Not found")
+
 
 class Listener(threading.Thread):
     routing_key = None
@@ -51,6 +53,7 @@ class Listener(threading.Thread):
         self.mor_core_service = MORCoreService()
 
     def run(self):
+        logger.info(f"GIT_SHA: {GIT_SHA}")
         logger.info(
             f"Joblisterner={self.__class__.__name__}, with routing_key={self.routing_key}"
         )
