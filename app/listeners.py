@@ -132,6 +132,13 @@ class MeldingAfhandelen(Listener):
                 for test_result_verbose in test_results_verbose:
                     logger.info(test_result_verbose)
 
+                if not ENVIRONMENT_IS_PRODUCTION:
+                    self.mor_core_service.melding_gebeurtenis_toevoegen(
+                        melding_data.get("uuid"),
+                        omschrijving_intern=omschrijving_intern,
+                        gebruiker=BOT_USER_EMAIL,
+                    )
+
                 if test_results_passed:
                     afhandel_data = {
                         "uuid": melding_data.get("uuid"),
@@ -162,10 +169,4 @@ class MeldingAfhandelen(Listener):
                     else:
                         logger.info(f"Melding '{melding_url}', is afgehandeld")
 
-                    if not ENVIRONMENT_IS_PRODUCTION:
-                        self.mor_core_service.melding_gebeurtenis_toevoegen(
-                            melding_data.get("uuid"),
-                            omschrijving_intern=omschrijving_intern,
-                            gebruiker=BOT_USER_EMAIL,
-                        )
                     break
