@@ -66,7 +66,7 @@ class Listener(threading.Thread):
         logger.debug(f"body: {body}")
 
         channel.basic_ack(delivery_tag=method.delivery_tag)
-        # self.test(json.loads(body))
+        self.test(json.loads(body))
 
     def _camel_case_string(self, string):
         return re.sub(r"([a-z])([A-Z])", r"\1_\2", string).lower()
