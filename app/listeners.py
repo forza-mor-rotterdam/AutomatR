@@ -76,8 +76,6 @@ class Listener(threading.Thread):
             f"LISTENER_{self._camel_case_string(self.__class__.__name__).upper()}",
             "this must generate json error",
         )
-        # TODO: remove line below before production release
-        listener_vars = '{"taak_aantal_1_met_specifiek_taaktype_en_signalen_anoniem": [{"taakapplicatie_taaktype_url": "https://externr-test.forzamor.nl/api/v1/taaktype/daf6b381-ecfe-49d9-a197-2e124635b452/", "omschrijving_extern": "Doorgestuurd naar Havenbedrijf Rotterdam https://www.portofrotterdam.com/nl"}]}'
         try:
             return json.loads(listener_vars)
         except Exception:
@@ -107,10 +105,7 @@ class MeldingAfhandelen(Listener):
             rules = rule_set.get("rules", [])
             logger.info(f"Rule key: {rule_set['key']}")
             rule_variables = variables.get(rule_set["key"], {})
-            # rule_variables = {
-            #     required_var_key: rule_variables.get(required_var_key, default_value)
-            #     for required_var_key, default_value in rule_set.get("required_vars", {})
-            # }
+
             if isinstance(rule_variables, dict):
                 rule_variables = [rule_variables]
             logger.info(
