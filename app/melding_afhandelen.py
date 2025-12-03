@@ -49,8 +49,8 @@ rule_sets = (
                 "[taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op'] and taakopdracht&['afgesloten_op'] and taakopdracht&['resolutie'] == 'opgelost' and taakopdracht&['taaktype'] == '{taakapplicatie_taaktype_url}'].length == 1",
             ),
             (
-                "Is er maar één taakopdracht succesvol afgehandeld zonder intere opmerking met als taaktype '{taakapplicatie_taaktype_url}'?",
-                "[taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op'] and taakopdracht&['afgesloten_op'] and taakopdracht&['resolutie'] == 'opgelost' and taakopdracht&['taaktype'] == '{taakapplicatie_taaktype_url}' and taakopdracht&['taakgebeurtenissen_voor_taakopdracht'] and [taakgebeurtenis for taakgebeurtenis in taakopdracht['taakgebeurtenissen_voor_taakopdracht'] if taakgebeurtenis&['resolutie'] == 'opgelost' and (not taakgebeurtenis&['omschrijving_intern'])]].length == 1",
+                "Is er maar één taakopdracht succesvol afgehandeld zonder intere opmerking of ExternR intere opmerking, met als taaktype '{taakapplicatie_taaktype_url}'?",
+                "[taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op'] and taakopdracht&['afgesloten_op'] and taakopdracht&['resolutie'] == 'opgelost' and taakopdracht&['taaktype'] == '{taakapplicatie_taaktype_url}' and taakopdracht&['taakgebeurtenissen_voor_taakopdracht'] and [taakgebeurtenis for taakgebeurtenis in taakopdracht['taakgebeurtenissen_voor_taakopdracht'] if taakgebeurtenis&['resolutie'] == 'opgelost' and (not taakgebeurtenis&['omschrijving_intern'] or taakgebeurtenis&['omschrijving_intern'] == 'Automatisch voltooid door ExternR')]].length == 1",
             ),
         ),
         "data": {
