@@ -112,6 +112,7 @@ class MeldingAfhandelen(Listener):
                 f"Aantal variabelen varianten voor deze rule: {len(rule_variables)}"
             )
             for vars in rule_variables:
+                vars = {k: vars.get(k, v) for k, v in rule_set.get("input", {}).items()}
                 logger.info(f"Start test for rule set with variables: {vars}")
                 test_results = [
                     [r[0].format(**vars), R(r[1].format(**vars)).matches(melding_data)]
@@ -138,26 +139,34 @@ class MeldingAfhandelen(Listener):
                     )
 
                 if test_results_passed:
-                    afhandel_data = {
+                    default_afhandel_data = {
                         "uuid": melding_data.get("uuid"),
                         "resolutie": "opgelost",
                         "omschrijving_intern": omschrijving_intern
                         if not ENVIRONMENT_IS_PRODUCTION
                         else "",
-                        "omschrijving_extern": "Afgehandeld door bot",
                         "gebruiker": BOT_USER_EMAIL,
                     }
-                    afhandel_data.update(
-                        {
-                            k: v.format(**vars)
-                            for k, v in rule_set.get("data", {}).items()
-                        }
-                    )
+                    afhandel_data = {
+                        k: v.format(**vars)
+                        for k, v in rule_set.get("data", {}).items()
+                        if v.format(**vars)
+                    }
+                    default_afhandel_data.update(afhandel_data)
+
                     logger.info(
-                        f"Melding afhandelen met data: {json.dumps(afhandel_data, indent=4)}"
+                        f"Melding afhandelen met data: {json.dumps(default_afhandel_data, indent=4)}"
                     )
+                    if not default_afhandel_data.get("omschrijving_extern"):
+                        logger.warning(
+                            "Melding afhandelen omschrijving_extern ontbreekt"
+                        )
+                        break
+
                     melding_afhandelen_response = (
-                        self.mor_core_service.melding_afhandelen_v2(**afhandel_data)
+                        self.mor_core_service.melding_afhandelen_v2(
+                            **default_afhandel_data
+                        )
                     )
 
                     if melding_afhandelen_response.get("error"):
