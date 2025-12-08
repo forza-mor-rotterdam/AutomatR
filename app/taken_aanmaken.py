@@ -5,7 +5,7 @@ rule_sets = (
         "key": "melding_aangemaakt_met_onderwerp_en_vragen",
         "title": "Melding met specifiek onderwerp en eventueel antwoord op diverse vragen",
         "active": True,
-        "required_vars": {
+        "input": {
             "taaktype": "default",
             "bericht": "default",
         },

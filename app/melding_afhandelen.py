@@ -5,7 +5,7 @@ rule_sets = (
         "key": "taak_aantal_1_en_signalen_anoniem",
         "title": "Melding met 1 taak, waarbij alle signalen anoniem gemeld zijn",
         "active": False,
-        "required_vars": [],
+        "input": [],
         "rules": (
             ("Heeft de melding de status 'Controle'", "status&['naam'] == 'controle'"),
             (
@@ -24,11 +24,14 @@ rule_sets = (
     },
     {
         "key": "taak_aantal_1_met_specifiek_taaktype_en_signalen_anoniem",
-        "title": "Melding met 1 taak voor Havenbedrijf Rotterdam, waarbij alle signalen anoniem gemeld zijn",
+        "title": "Melding afhandelen na het afhandelen van 1 specifieke taak en dat is de enige taak voor deze melding",
         "active": True,
-        "required_vars": {
-            "taakapplicatie_taaktype_url": "default",
-            "omschrijving_extern": "default",
+        "input": {
+            "taakapplicatie_taaktype_url": "",
+            "omschrijving_extern": "",
+            "resolutie": "opgelost",
+            "afhandelreden": "",
+            "specificatie": "",
         },
         "rules": (
             ("Heeft de melding de status 'Controle'?", "status&['naam'] == 'controle'"),
@@ -56,6 +59,9 @@ rule_sets = (
         "data": {
             "omschrijving_intern": "",
             "omschrijving_extern": "{omschrijving_extern}",
+            "resolutie": "{resolutie}",
+            "afhandelreden": "{afhandelreden}",
+            "specificatie": "{specificatie}",
         },
     },
 )
