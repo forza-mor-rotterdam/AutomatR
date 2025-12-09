@@ -142,9 +142,6 @@ class MeldingAfhandelen(Listener):
                     default_afhandel_data = {
                         "uuid": melding_data.get("uuid"),
                         "resolutie": "opgelost",
-                        "omschrijving_intern": omschrijving_intern
-                        if not ENVIRONMENT_IS_PRODUCTION
-                        else "",
                         "gebruiker": BOT_USER_EMAIL,
                     }
                     afhandel_data = {
