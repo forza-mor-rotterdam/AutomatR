@@ -45,3 +45,5 @@ To manually run the pre-commit formatting run
     pre-commit run --all-files
 ```
 Pre-commit currently runs black, flake8, autoflake, isort and some pre-commit hooks.
+
+

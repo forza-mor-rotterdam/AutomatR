@@ -1,6 +1,6 @@
 FROM python:3.13.5-slim-bullseye
 
-EXPOSE 8000
+EXPOSE 5672
 
 ENV APP_HOME=/app \
     APP_USER=appuser \
@@ -20,7 +20,7 @@ RUN apt-get update \
 COPY . /app/
 
 RUN chown -R "$APP_USER":"$APP_USER" "$APP_HOME" \
-    && chmod -R +x /app/deploy \
+    && pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt
 
 USER $APP_USER

@@ -1,5 +1,5 @@
 services:
-  automatr_app:
+  automatr_melding_afhandelen:
     build: &build-definition
       context: ./app
       args:
@@ -11,6 +11,22 @@ services:
     volumes:
       - ./app:/app
     command: ["python", "melding_afhandelen.py"]
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1024M
+
+  automatr_taken_aanmaken:
+    build: *build-definition
+    env_file:
+      - .env.local
+    networks:
+      - mor_bridge_network
+    volumes:
+      - ./app:/app
+    command: ["python", "taken_aanmaken.py"]
     restart: always
     deploy:
       resources:
