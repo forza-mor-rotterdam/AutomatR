@@ -1,7 +1,7 @@
 from listeners import MeldingAfhandelen
 
-rule_sets = (
-    {
+rule_sets = {
+    "taak_aantal_1_en_signalen_anoniem": {
         "key": "taak_aantal_1_en_signalen_anoniem",
         "title": "Melding met 1 taak, waarbij alle signalen anoniem gemeld zijn",
         "active": False,
@@ -22,8 +22,8 @@ rule_sets = (
             "omschrijving_extern": "Afgehandeld door bot",
         },
     },
-    {
-        "key": "taak_aantal_1_met_specifiek_taaktype_en_signalen_anoniem",
+    "melding_afhandelen_door_taak": {
+        "key": "melding_afhandelen_door_taak",
         "title": "Melding afhandelen na het afhandelen van 1 specifieke taak en dat is de enige taak voor deze melding",
         "active": True,
         "input": {
@@ -35,10 +35,6 @@ rule_sets = (
         },
         "rules": (
             ("Heeft de melding de status 'Controle'?", "status&['naam'] == 'controle'"),
-            (
-                "Is de melding nog niet ontdubbeld?",
-                "signalen_voor_melding.length == 1",
-            ),
             (
                 "Is er maar één taakopdracht die niet is verwijderd?",
                 "[taakopdracht for taakopdracht in taakopdrachten_voor_melding if not taakopdracht&['verwijderd_op']].length == 1",
@@ -64,7 +60,7 @@ rule_sets = (
             "specificatie": "{specificatie}",
         },
     },
-)
+}
 
 MeldingAfhandelen(
     routing_key="melding.*.taakopdrachten_veranderd",
