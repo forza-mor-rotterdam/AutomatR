@@ -111,7 +111,7 @@ class MeldingAfhandelen(Listener):
         rule_variables = next(
             iter(
                 [
-                    setting["settings"]
+                    setting.get("settings", []) if setting.get("settings") else []
                     for setting in all_settings.get("results", [])
                     if setting["name"] == settings_key
                 ]
@@ -123,6 +123,17 @@ class MeldingAfhandelen(Listener):
             f"Aantal variabelen varianten voor deze rule: {len(rule_variables)}"
         )
         for vars in rule_variables:
+            required_vars = (
+                "taakapplicatie_taaktype_url",
+                "omschrijving_extern",
+            )
+            if len([k for k, v in vars.items() if k in required_vars and v]) < len(
+                required_vars
+            ):
+                logger.warning(
+                    "Settings variabele(n) ontbreken: 'taakapplicatie_taaktype_url' en 'omschrijving_extern' zijn verplicht"
+                )
+                continue
             vars = {k: vars.get(k, v) for k, v in rule_set.get("input", {}).items()}
             logger.info(f"Start test for rule set with variables: {vars}")
             test_results = [
@@ -202,7 +213,7 @@ class TakenAanmaken(Listener):
         rule_variables = next(
             iter(
                 [
-                    setting["settings"]
+                    setting.get("settings", []) if setting.get("settings") else []
                     for setting in all_settings.get("results", [])
                     if setting["name"] == settings_key
                 ]
@@ -224,6 +235,7 @@ class TakenAanmaken(Listener):
                 for question in rule_variable_set.get("onderwerp", {}).get(
                     "questions", []
                 )
+                if rule_variable_set.get("onderwerp", {}).get("url")
                 for answer in question.get("answers", [])
             ]
             all_tests = []
@@ -246,30 +258,50 @@ class TakenAanmaken(Listener):
                 ]
                 all_results_verbose = all_results_verbose + test_results_verbose
 
-            if all(all_tests):
+            if rule_test_variables and all(all_tests):
                 logger.info(
                     f'Taakopdrachten aantal: {len(rule_variable_set.get("taakopdrachten", []))}'
                 )
                 for taakopdracht in rule_variable_set.get("taakopdrachten", []):
                     taakapplicatie_taaktype_url = taakopdracht.get("taaktype")
+                    logger.info(
+                        f"taakapplicatie_taaktype_url: {taakapplicatie_taaktype_url}"
+                    )
                     taaktypes_response = TaakRService().get_taaktypes(
                         params={
                             "taakapplicatie_taaktype_url": taakapplicatie_taaktype_url
                         }
                     )
+                    if isinstance(taaktypes_response, dict) and taaktypes_response.get(
+                        "errors"
+                    ):
+                        logger.error(
+                            f'taaktype response errors: {taaktypes_response.get("errors")}'
+                        )
+                        continue
                     if taaktypes_response:
+                        logger.info(f"taaktypes_response: {taaktypes_response}")
                         taakopdracht_data = {
                             "melding_uuid": melding_data.get("uuid"),
                             "taakapplicatie_taaktype_url": taakapplicatie_taaktype_url,
                             "titel": taaktypes_response[0].get("omschrijving"),
                             "bericht": taakopdracht.get("bericht"),
                             "gebruiker": BOT_USER_EMAIL,
+                            "afhankelijkheid": [],
                         }
                         taak_aanmaken_response = self.mor_core_service.taak_aanmaken(
                             **taakopdracht_data
                         )
+                        logger.info(f"taak_aanmaken_response: {taak_aanmaken_response}")
                         if taak_aanmaken_response.get("errors"):
-                            logger.error(taak_aanmaken_response.get("errors"))
+                            logger.error(
+                                f'taak aanmaken response errors: {taak_aanmaken_response.get("errors")}'
+                            )
+                            continue
+                    else:
+                        logger.error(
+                            f"het taaktype is niet gevonden: {taakapplicatie_taaktype_url}"
+                        )
 
             if not ENVIRONMENT_IS_PRODUCTION:
                 self.mor_core_service.melding_gebeurtenis_toevoegen(
