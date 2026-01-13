@@ -152,7 +152,7 @@ jobs:
           KUBE_CERTIFICATE: ${{ vars.KUBE_CERTIFICATE }}
           KUBE_TOKEN: ${{ secrets.KUBE_TOKEN }}
         with:
-          args: rollout restart deployment/worker-melding-afhandelen deployment/worker-taken-aanmaken --namespace=${{ vars.KUBE_NAMESPACE }}
+          args: rollout restart deployment/worker-melding-afhandelen --namespace=${{ vars.KUBE_NAMESPACE }}
       - name: Status rollout on k8s platform
         uses: actions-hub/kubectl@master
         env:
@@ -160,7 +160,7 @@ jobs:
           KUBE_CERTIFICATE: ${{ vars.KUBE_CERTIFICATE }}
           KUBE_TOKEN: ${{ secrets.KUBE_TOKEN }}
         with:
-          args: rollout status deployment/worker-melding-afhandelen deployment/worker-taken-aanmaken --namespace=${{ vars.KUBE_NAMESPACE }}
+          args: rollout status deployment/worker-melding-afhandelen --namespace=${{ vars.KUBE_NAMESPACE }}
 
   deploy_prod:
     name: Deploy prod
