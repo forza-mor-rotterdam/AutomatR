@@ -1,7 +1,7 @@
 from listeners import TakenAanmaken
 
-rule_sets = (
-    {
+rule_sets = {
+    "taak_aanmaken_bij_onderwerp": {
         "key": "melding_aangemaakt_met_onderwerp_en_vragen",
         "title": "Melding met specifiek onderwerp en eventueel antwoord op diverse vragen",
         "active": True,
@@ -36,7 +36,7 @@ rule_sets = (
             "bericht": "{bericht}",
         },
     },
-)
+}
 
 TakenAanmaken(
     routing_key="melding.*.aangemaakt",

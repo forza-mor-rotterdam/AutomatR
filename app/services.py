@@ -21,7 +21,7 @@ class TaakRService(BasisTaakRService):
     def __init__(self, *args, **kwargs):
         kwargs.update(
             {
-                "basis_url": os.getenv("TAAKR_URL", "http://taakr.mor.local:8009"),
+                "basis_url": os.getenv("TAAKR_URL", "https://taakr-test.forzamor.nl"),
             }
         )
         super().__init__(*args, **kwargs)
