@@ -19,9 +19,7 @@ ENVIRONMENT_TEST = "test"
 ENVIRONMENT_ACCEPTANCE = "acceptance"
 ENVIRONMENT_PRODUCTION = "production"
 
-ENVIRONMENT_IS_PRODUCTION = (
-    os.getenv("ENVIRONMENT", ENVIRONMENT_PRODUCTION) == ENVIRONMENT_PRODUCTION
-)
+ENVIRONMENT = os.getenv("ENVIRONMENT")
 BOT_USER_EMAIL = os.getenv("BOT_USER_EMAIL", "botjeknor@rotterdam.nl")
 
 GIT_SHA = os.getenv("GIT_SHA", "Not found")
@@ -99,6 +97,7 @@ class MeldingAfhandelen(Listener):
         all_settings = self.get_settings()
 
         logger.info(f"MeldingAfhandelen melding_url: {melding_url}")
+        logger.info(f"MeldingAfhandelen in omgeving: {ENVIRONMENT}")
         logger.info(
             f'MeldingAfhandelen all variables: {all_settings.get("results", [])}'
         )
@@ -148,15 +147,9 @@ class MeldingAfhandelen(Listener):
             omschrijving_intern = f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}, {', '.join(test_results_verbose)}"
 
             logger.info(f"Melding afhandelen? {'Ja' if test_results_passed else 'Nee'}")
+            logger.info(f"Melding tests? {omschrijving_intern}")
             for test_result_verbose in test_results_verbose:
                 logger.info(test_result_verbose)
-
-            if not ENVIRONMENT_IS_PRODUCTION:
-                self.mor_core_service.melding_gebeurtenis_toevoegen(
-                    melding_data.get("uuid"),
-                    omschrijving_intern=omschrijving_intern,
-                    gebruiker=BOT_USER_EMAIL,
-                )
 
             if test_results_passed:
                 default_afhandel_data = {
@@ -258,6 +251,9 @@ class TakenAanmaken(Listener):
                 ]
                 all_results_verbose = all_results_verbose + test_results_verbose
 
+            omschrijving_intern = ", ".join(sorted(list(set(all_results_verbose))))
+            logger.info(f"TakenAanmaken: Melding tests? {omschrijving_intern}")
+
             if rule_test_variables and all(all_tests):
                 logger.info(
                     f'Taakopdrachten aantal: {len(rule_variable_set.get("taakopdrachten", []))}'
@@ -302,12 +298,3 @@ class TakenAanmaken(Listener):
                         logger.error(
                             f"het taaktype is niet gevonden: {taakapplicatie_taaktype_url}"
                         )
-
-            if not ENVIRONMENT_IS_PRODUCTION:
-                self.mor_core_service.melding_gebeurtenis_toevoegen(
-                    melding_data.get("uuid"),
-                    omschrijving_intern=", ".join(
-                        sorted(list(set(all_results_verbose)))
-                    ),
-                    gebruiker=BOT_USER_EMAIL,
-                )
